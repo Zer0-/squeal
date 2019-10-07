@@ -21,6 +21,7 @@ module Squeal.PostgreSQL.Expression.Math
   , trunc
   , round_
   , ceiling_
+  , length_
   ) where
 
 import Squeal.PostgreSQL.Expression
@@ -41,6 +42,10 @@ atan2_
   :: float `In` PGFloating
   => FunctionN '[ null float, null float] (null float)
 atan2_ = unsafeFunctionN "atan2"
+
+
+length_ :: null 'PGbytea :--> null 'PGint4
+length_ = unsafeFunction "length"
 
 
 -- | integer division, truncates the result
