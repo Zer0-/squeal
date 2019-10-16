@@ -38,9 +38,7 @@ import Squeal.PostgreSQL.Schema
 -- in printSQL expression
 -- :}
 -- atan2(pi(), 2)
-atan2_
-  :: float `In` PGFloating
-  => FunctionN '[ null float, null float] (null float)
+atan2_ :: float `In` PGFloating => '[ null float, null float] ---> null float
 atan2_ = unsafeFunctionN "atan2"
 
 
@@ -83,7 +81,7 @@ rem_ = unsafeBinaryOp "%"
 -- in printSQL expression
 -- :}
 -- trunc(pi())
-trunc :: frac `In` PGFloating => null frac :--> null frac
+trunc :: frac `In` PGFloating => null frac --> null frac
 trunc = unsafeFunction "trunc"
 
 -- | >>> :{
@@ -93,7 +91,7 @@ trunc = unsafeFunction "trunc"
 -- in printSQL expression
 -- :}
 -- round(pi())
-round_ :: frac `In` PGFloating => null frac :--> null frac
+round_ :: frac `In` PGFloating => null frac --> null frac
 round_ = unsafeFunction "round"
 
 -- | >>> :{
@@ -103,5 +101,5 @@ round_ = unsafeFunction "round"
 -- in printSQL expression
 -- :}
 -- ceiling(pi())
-ceiling_ :: frac `In` PGFloating => null frac :--> null frac
+ceiling_ :: frac `In` PGFloating => null frac --> null frac
 ceiling_ = unsafeFunction "ceiling"

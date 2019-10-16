@@ -162,45 +162,45 @@ isNotDistinctFrom = unsafeBinaryOp "IS NOT DISTINCT FROM"
 >>> printSQL $ true & isTrue
 (TRUE IS TRUE)
 -}
-isTrue :: null0 'PGbool :--> null1 'PGbool
-isTrue = unsafeUnaryOpR "IS TRUE"
+isTrue :: null0 'PGbool --> null1 'PGbool
+isTrue = unsafeRightOp "IS TRUE"
 
 {- | is false or unknown
 
 >>> printSQL $ true & isNotTrue
 (TRUE IS NOT TRUE)
 -}
-isNotTrue :: null0 'PGbool :--> null1 'PGbool
-isNotTrue = unsafeUnaryOpR "IS NOT TRUE"
+isNotTrue :: null0 'PGbool --> null1 'PGbool
+isNotTrue = unsafeRightOp "IS NOT TRUE"
 
 {- | is false
 
 >>> printSQL $ true & isFalse
 (TRUE IS FALSE)
 -}
-isFalse :: null0 'PGbool :--> null1 'PGbool
-isFalse = unsafeUnaryOpR "IS FALSE"
+isFalse :: null0 'PGbool --> null1 'PGbool
+isFalse = unsafeRightOp "IS FALSE"
 
 {- | is true or unknown
 
 >>> printSQL $ true & isNotFalse
 (TRUE IS NOT FALSE)
 -}
-isNotFalse :: null0 'PGbool :--> null1 'PGbool
-isNotFalse = unsafeUnaryOpR "IS NOT FALSE"
+isNotFalse :: null0 'PGbool --> null1 'PGbool
+isNotFalse = unsafeRightOp "IS NOT FALSE"
 
 {- | is unknown
 
 >>> printSQL $ true & isUnknown
 (TRUE IS UNKNOWN)
 -}
-isUnknown :: null0 'PGbool :--> null1 'PGbool
-isUnknown = unsafeUnaryOpR "IS UNKNOWN"
+isUnknown :: null0 'PGbool --> null1 'PGbool
+isUnknown = unsafeRightOp "IS UNKNOWN"
 
 {- | is true or false
 
 >>> printSQL $ true & isNotUnknown
 (TRUE IS NOT UNKNOWN)
 -}
-isNotUnknown :: null0 'PGbool :--> null1 'PGbool
-isNotUnknown = unsafeUnaryOpR "IS NOT UNKNOWN"
+isNotUnknown :: null0 'PGbool --> null1 'PGbool
+isNotUnknown = unsafeRightOp "IS NOT UNKNOWN"

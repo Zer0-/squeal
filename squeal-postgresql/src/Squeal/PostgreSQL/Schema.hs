@@ -44,6 +44,10 @@ module Squeal.PostgreSQL.Schema
   , ColumnsType
   , TableType
   , SchemumType (..)
+  , IndexType (..)
+  , FunctionType
+  , OperatorType (..)
+  , ReturnsType (..)
   , SchemaType
   , SchemasType
   , Public
@@ -58,9 +62,16 @@ module Squeal.PostgreSQL.Schema
   , PGlabel (..)
     -- * Data Definitions
   , Create
+  , CreateIfNotExists
+  , CreateOrReplace
   , Drop
+  , DropSchemum
+  , DropIfExists
+  , DropSchemumIfExists
   , Alter
+  , AlterIfExists
   , Rename
+  , RenameIfExists
   , ConstraintInvolves
   , DropIfConstraintsInvolve
   , IsNotElem
@@ -132,7 +143,9 @@ data PGType
   | PGenum [Symbol] -- ^ enumerated (enum) types are data types that comprise a static, ordered set of values.
   | PGcomposite RowType -- ^ a composite type represents the structure of a row or record; it is essentially just a list of field names and their data types.
   | PGtsvector -- ^ A tsvector value is a sorted list of distinct lexemes, which are words that have been normalized to merge different variants of the same word.
-  | PGtsquery -- ^ A tsquery value stores lexemes that are to be searched for
+  | PGtsquery -- ^ A tsquery value stores lexemes that are to be searched for.
+  | PGoid -- Object identifiers (OIDs) are used internally by PostgreSQL as primary keys for various system tables.
+  | PGrange PGType -- ^ Range types are data types representing a range of values of some element type (called the range's subtype).
   | UnsafePGType Symbol -- ^ an escape hatch for unsupported PostgreSQL types
 
 -- | `NullityType` encodes the potential presence or definite absence of a
@@ -318,29 +331,100 @@ type family Create alias x xs where
   Create alias x (alias ::: y ': xs) = TypeError
     ('Text "Create: alias "
     ':<>: 'ShowType alias
-    ':<>: 'Text "already in use")
+    ':<>: 'Text "already exists")
   Create alias y (x ': xs) = x ': Create alias y xs
+
+type family CreateIfNotExists alias x xs where
+  CreateIfNotExists alias x '[] = '[alias ::: x]
+  CreateIfNotExists alias x (alias ::: y ': xs) = alias ::: y ': xs
+  CreateIfNotExists alias y (x ': xs) = x ': CreateIfNotExists alias y xs
+
+type family CreateOrReplace alias x xs where
+  CreateOrReplace alias x '[] = '[alias ::: x]
+  CreateOrReplace alias x (alias ::: x ': xs) = alias ::: x ': xs
+  CreateOrReplace alias x (alias ::: y ': xs) = TypeError
+    ('Text "CreateOrReplace: expected type "
+    ':<>: 'ShowType x
+    ':<>: 'Text " but alias "
+    ':<>: 'ShowType alias
+    ':<>: 'Text " has type "
+    ':<>: 'ShowType y)
+  CreateOrReplace alias y (x ': xs) = x ': CreateOrReplace alias y xs
 
 -- | @Drop alias xs@ removes the type associated with @alias@ in @xs@
 -- and is used in `Squeal.PostgreSQL.Definition.dropTable` statements
 -- and in @ALTER TABLE@ `Squeal.PostgreSQL.Definition.dropColumn` statements.
 type family Drop alias xs where
-  Drop alias ((alias ::: x) ': xs) = xs
+  Drop alias '[] = TypeError
+    ('Text "Drop: alias "
+    ':<>: 'ShowType alias
+    ':<>: 'Text " does not exist" )
+  Drop alias (alias ::: x ': xs) = xs
   Drop alias (x ': xs) = x ': Drop alias xs
+
+type family DropSchemum alias sch xs where
+  DropSchemum alias sch '[] = TypeError
+    ('Text "DropSchemum: alias "
+    ':<>: 'ShowType alias
+    ':<>: 'Text " does not exist" )
+  DropSchemum alias sch (alias ::: sch x ': xs) = xs
+  DropSchemum alias sch0 (alias ::: sch1 x ': xs) = TypeError
+    ('Text "DropSchemum: expected schemum "
+    ':<>: 'ShowType sch0
+    ':<>: 'Text " but alias "
+    ':<>: 'ShowType alias
+    ':<>: 'Text " has schemum "
+    ':<>: 'ShowType sch1)
+  DropSchemum alias sch (x ': xs) = x ': DropSchemum alias sch xs
+
+type family DropIfExists alias xs where
+  DropIfExists alias '[] = '[]
+  DropIfExists alias (alias ::: x ': xs) = xs
+  DropIfExists alias (x ': xs) = x ': DropIfExists alias xs
+
+type family DropSchemumIfExists alias sch xs where
+  DropSchemumIfExists alias sch '[] = '[]
+  DropSchemumIfExists alias sch (alias ::: sch x ': xs) = xs
+  DropSchemumIfExists alias sch0 (alias ::: sch1 x ': xs) = TypeError
+    ('Text "DropSchemumIfExists: expected schemum "
+    ':<>: 'ShowType sch1
+    ':<>: 'Text " but alias "
+    ':<>: 'ShowType alias
+    ':<>: 'Text " has schemum "
+    ':<>: 'ShowType sch0)
+  DropSchemumIfExists alias sch (x ': xs) = x ': DropSchemumIfExists alias sch xs
 
 -- | @Alter alias x xs@ replaces the type associated with an @alias@ in @xs@
 -- with the type @x@ and is used in `Squeal.PostgreSQL.Definition.alterTable`
 -- and `Squeal.PostgreSQL.Definition.alterColumn`.
 type family Alter alias x xs where
+  Alter alias x '[] = TypeError
+    ('Text "Alter: alias "
+    ':<>: 'ShowType alias
+    ':<>: 'Text " does not exist" )
   Alter alias x1 (alias ::: x0 ': xs) = alias ::: x1 ': xs
   Alter alias x1 (x0 ': xs) = x0 ': Alter alias x1 xs
+
+type family AlterIfExists alias x xs where
+  AlterIfExists alias x '[] = '[]
+  AlterIfExists alias x1 (alias ::: x0 ': xs) = alias ::: x1 ': xs
+  AlterIfExists alias x1 (x0 ': xs) = x0 ': AlterIfExists alias x1 xs
 
 -- | @Rename alias0 alias1 xs@ replaces the alias @alias0@ by @alias1@ in @xs@
 -- and is used in `Squeal.PostgreSQL.Definition.alterTableRename` and
 -- `Squeal.PostgreSQL.Definition.renameColumn`.
 type family Rename alias0 alias1 xs where
+  Rename alias0 alias1 '[] = TypeError
+    ('Text "Rename: alias "
+    ':<>: 'ShowType alias0
+    ':<>: 'Text " does not exist" )
   Rename alias0 alias1 ((alias0 ::: x0) ': xs) = (alias1 ::: x0) ': xs
   Rename alias0 alias1 (x ': xs) = x ': Rename alias0 alias1 xs
+
+type family RenameIfExists alias0 alias1 xs where
+  RenameIfExists alias x '[] = '[]
+  RenameIfExists alias0 alias1 ((alias0 ::: x0) ': xs) = (alias1 ::: x0) ': xs
+  RenameIfExists alias0 alias1 (x ': xs) = x ': RenameIfExists alias0 alias1 xs
 
 -- | Check if a `TableConstraint` involves a column
 type family ConstraintInvolves column constraint where
@@ -364,6 +448,29 @@ data SchemumType
   = Table TableType
   | View RowType
   | Typedef PGType
+  | Index IndexType
+  | Function FunctionType
+  | Operator OperatorType
+  | UnsafeSchemum Symbol
+
+type FunctionType = ([NullityType], ReturnsType)
+
+data IndexType
+  = Btree
+  | Hash
+  | Gist
+  | Spgist
+  | Gin
+  | Brin
+
+data ReturnsType
+  = Returns NullityType
+  | ReturnsTable RowType
+
+data OperatorType
+  = BinaryOp NullityType NullityType NullityType
+  | LeftOp NullityType NullityType
+  | RightOp NullityType NullityType
 
 {- | The schema of a database consists of a list of aliased,
 user-defined `SchemumType`s.

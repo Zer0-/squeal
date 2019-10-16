@@ -39,6 +39,8 @@ module Squeal.PostgreSQL.Query
   , select_
   , selectDistinct
   , selectDistinct_
+  , selectDistinctOn
+  , selectDistinctOn_
   , Selection (..)
     -- ** Values
   , values
@@ -573,6 +575,48 @@ selectDistinct_
   -> Query outer commons schemas params columns
 selectDistinct_ = selectDistinct . List
 
+{-|
+`selectDistinctOn` keeps only the first row of each set of rows where
+the given expressions evaluate to equal. The DISTINCT ON expressions are
+interpreted using the same rules as for ORDER BY. ORDER BY is used to
+ensure that the desired row appears first.
+-}
+selectDistinctOn
+  :: (SListI columns, columns ~ (col ': cols))
+  => [SortExpression outer commons 'Ungrouped schemas params from]
+  -- ^ distinct on and return the first row in ordering
+  -> Selection outer commons 'Ungrouped schemas params from columns
+  -- ^ selection
+  -> TableExpression outer commons 'Ungrouped schemas params from
+  -- ^ intermediate virtual table
+  -> Query outer commons schemas params columns
+selectDistinctOn distincts selection tab = UnsafeQuery $
+  "SELECT DISTINCT ON"
+  <+> parenthesized (commaSeparated (renderDistinctOn <$> distincts))
+  <+> renderSQL selection
+  <+> renderSQL (tab {orderByClause = distincts <> orderByClause tab})
+  where
+    renderDistinctOn = \case
+      Asc expression -> renderSQL expression
+      Desc expression -> renderSQL expression
+      AscNullsFirst expression -> renderSQL expression
+      DescNullsFirst expression -> renderSQL expression
+      AscNullsLast expression -> renderSQL expression
+      DescNullsLast expression -> renderSQL expression
+
+-- | Like `selectDistinctOn` but takes an `NP` list of `Expression`s instead
+-- of a general `Selection`.
+selectDistinctOn_
+  :: (SListI columns, columns ~ (col ': cols))
+  => [SortExpression outer commons 'Ungrouped schemas params from]
+  -- ^ distinct on and return the first row in ordering
+  -> NP (Aliased (Expression outer commons 'Ungrouped schemas params from)) columns
+  -- ^ selection
+  -> TableExpression outer commons 'Ungrouped schemas params from
+  -- ^ intermediate virtual table
+  -> Query outer commons schemas params columns
+selectDistinctOn_ distincts = selectDistinctOn distincts . List
+
 -- | `values` computes a row value or set of row values
 -- specified by value expressions. It is most commonly used
 -- to generate a “constant table” within a larger command,
@@ -997,8 +1041,8 @@ instance
   , commons1 ~ (cte ::: common ': commons)
   ) => Aliasable cte
     (statement commons schemas params common)
-    (AlignedList (CommonTableExpression statement schemas params) commons commons1) where
-      statement `as` cte = single (statement `as` cte)
+    (Path (CommonTableExpression statement schemas params) commons commons1) where
+      statement `as` cte = csingleton (statement `as` cte)
 
 instance (forall c s p r. RenderSQL (statement c s p r)) => RenderSQL
   (CommonTableExpression statement schemas params commons0 commons1) where
@@ -1010,7 +1054,7 @@ instance (forall c s p r. RenderSQL (statement c s p r)) => RenderSQL
 -- defining temporary tables that exist just for one query.
 class With statement where
   with
-    :: AlignedList (CommonTableExpression statement schemas params) commons0 commons1
+    :: Path (CommonTableExpression statement schemas params) commons0 commons1
     -- ^ common table expressions
     -> statement commons1 schemas params row
     -- ^ larger query
@@ -1018,7 +1062,7 @@ class With statement where
 instance With (Query outer) where
   with Done query = query
   with ctes query = UnsafeQuery $
-    "WITH" <+> renderSQL ctes <+> renderSQL query
+    "WITH" <+> commaSeparated (ctoList renderSQL ctes) <+> renderSQL query
 
 {- |
 >>> import Data.Monoid (Sum (..))

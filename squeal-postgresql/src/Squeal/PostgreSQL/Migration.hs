@@ -66,7 +66,7 @@ let
     }
 :}
 
-Now that we have a couple migrations we can chain them together into an `AlignedList`.
+Now that we have a couple migrations we can chain them together into a `Path`.
 
 >>> let migrations = makeUsers :>> makeEmails :>> Done
 
@@ -167,6 +167,9 @@ import qualified GHC.Generics as GHC
 import Squeal.PostgreSQL.Alias
 import Squeal.PostgreSQL.Binary
 import Squeal.PostgreSQL.Definition
+import Squeal.PostgreSQL.Definition.Table
+import Squeal.PostgreSQL.Definition.Table.Column
+import Squeal.PostgreSQL.Definition.Table.Constraint
 import Squeal.PostgreSQL.Expression.Comparison
 import Squeal.PostgreSQL.Expression.Parameter
 import Squeal.PostgreSQL.Expression.Time
@@ -190,34 +193,34 @@ data Migration p schemas0 schemas1 = Migration
 
 {- |
 A `Migratory` @p@ is a `Category` for which one can execute or rewind
-an `AlignedList` of `Migration`s over @p@. This includes the category of pure
+a `Path` of `Migration`s over @p@. This includes the category of pure
 SQL `Definition`s and the category of impure `Terminally` `PQ` `IO` actions.
 -}
 class Category p => Migratory p where
 
   {- |
-  Run an `AlignedList` of `Migration`s.
+  Run a `Path` of `Migration`s.
   Create the `MigrationsTable` as @public.schema_migrations@ if it does not already exist.
   In one transaction, for each each `Migration` query to see if the `Migration` has been executed;
   if not, `up` the `Migration` and insert its `name` in the `MigrationsTable`.
   -}
   migrateUp
-    :: AlignedList (Migration p) schemas0 schemas1
+    :: Path (Migration p) schemas0 schemas1
     -> PQ schemas0 schemas1 IO ()
 
   {- |
-  Rewind an `AlignedList` of `Migration`s.
+  Rewind a `Path` of `Migration`s.
   Create the `MigrationsTable` as @public.schema_migrations@ if it does not already exist.
   In one transaction, for each each `Migration` query to see if the `Migration` has been executed;
   if so, `down` the `Migration` and delete its `name` in the `MigrationsTable`.
   -}
   migrateDown
-    :: AlignedList (Migration p) schemas0 schemas1
+    :: Path (Migration p) schemas0 schemas1
     -> PQ schemas1 schemas0 IO ()
 
 instance Migratory Definition where
-  migrateUp = migrateUp . mapAligned pureMigration
-  migrateDown = migrateDown . mapAligned pureMigration
+  migrateUp = migrateUp . cmap pureMigration
+  migrateDown = migrateDown . cmap pureMigration
 
 {- | `Terminally` turns an indexed monad transformer and the monad it transforms
 into a category by restricting the return type to @()@ and permuting the type variables.
@@ -266,7 +269,7 @@ instance Migratory (Terminally PQ IO) where
     where
 
       upMigrations
-        :: AlignedList (Migration (Terminally PQ IO)) schemas0 schemas1
+        :: Path (Migration (Terminally PQ IO)) schemas0 schemas1
         -> PQ MigrationsSchemas MigrationsSchemas IO ()
       upMigrations = \case
         Done -> return ()
@@ -295,7 +298,7 @@ instance Migratory (Terminally PQ IO) where
     where
 
       downMigrations
-        :: AlignedList (Migration (Terminally PQ IO)) schemas0 schemas1
+        :: Path (Migration (Terminally PQ IO)) schemas0 schemas1
         -> PQ MigrationsSchemas MigrationsSchemas IO ()
       downMigrations = \case
         Done -> return ()
@@ -382,7 +385,7 @@ defaultMain
   :: Migratory p
   => ByteString
   -- ^ connection string
-  -> AlignedList (Migration p) db0 db1
+  -> Path (Migration p) db0 db1
   -- ^ migrations
   -> IO ()
 defaultMain connectTo migrations = do
@@ -403,7 +406,7 @@ defaultMain connectTo migrations = do
     migrateStatus :: PQ schema schema IO ()
     migrateStatus = unsafePQ $ do
       runNames <- getRunMigrationNames
-      let names = extractList name migrations
+      let names = ctoList name migrations
           unrunNames = names \\ runNames
       liftIO $ displayRunned runNames >> displayUnrunned unrunNames
 

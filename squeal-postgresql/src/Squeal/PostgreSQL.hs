@@ -195,6 +195,14 @@ module Squeal.PostgreSQL (module X, RenderSQL(..), printSQL) where
 import Squeal.PostgreSQL.Alias as X
 import Squeal.PostgreSQL.Binary as X
 import Squeal.PostgreSQL.Definition as X
+import Squeal.PostgreSQL.Definition.Function as X
+import Squeal.PostgreSQL.Definition.Index as X
+import Squeal.PostgreSQL.Definition.Schema as X
+import Squeal.PostgreSQL.Definition.Table as X
+import Squeal.PostgreSQL.Definition.Table.Column as X
+import Squeal.PostgreSQL.Definition.Table.Constraint as X
+import Squeal.PostgreSQL.Definition.Type as X
+import Squeal.PostgreSQL.Definition.View as X
 import Squeal.PostgreSQL.Expression as X
 import Squeal.PostgreSQL.Expression.Aggregate as X
 import Squeal.PostgreSQL.Expression.Collection as X
@@ -205,7 +213,8 @@ import Squeal.PostgreSQL.Expression.Logic as X
 import Squeal.PostgreSQL.Expression.Math as X
 import Squeal.PostgreSQL.Expression.Null as X
 import Squeal.PostgreSQL.Expression.Parameter as X
-import Squeal.PostgreSQL.Expression.SetOf as X
+import Squeal.PostgreSQL.Expression.Range as X
+import Squeal.PostgreSQL.Expression.Set as X
 import Squeal.PostgreSQL.Expression.Sort as X
 import Squeal.PostgreSQL.Expression.Subquery as X
 import Squeal.PostgreSQL.Expression.Text as X
@@ -217,6 +226,7 @@ import Squeal.PostgreSQL.List as X
 import Squeal.PostgreSQL.Manipulation as X
 import Squeal.PostgreSQL.Migration as X
 import Squeal.PostgreSQL.PG as X
+import Squeal.PostgreSQL.Pool as X
 import Squeal.PostgreSQL.PQ as X
 import Squeal.PostgreSQL.Query as X
 import Squeal.PostgreSQL.Render (RenderSQL(..), printSQL)
