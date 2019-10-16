@@ -42,7 +42,7 @@ atan2_ :: float `In` PGFloating => '[ null float, null float] ---> null float
 atan2_ = unsafeFunctionN "atan2"
 
 
-length_ :: null 'PGbytea :--> null 'PGint4
+length_ :: null 'PGbytea --> null 'PGint4
 length_ = unsafeFunction "length"
 
 
