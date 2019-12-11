@@ -23,6 +23,7 @@ Literal expressions
 module Squeal.PostgreSQL.Expression.Literal (Literal (..)) where
 
 import ByteString.StrictBuilder (builderBytes)
+import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (toStrict)
 import Data.Int
 import Data.String
@@ -32,6 +33,7 @@ import qualified Data.Aeson as JSON
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as Lazy (Text)
 import qualified Data.Text.Lazy as Lazy.Text
+import qualified Data.ByteString.Base16 as Base16
 
 import Squeal.PostgreSQL.Binary
 import Squeal.PostgreSQL.Expression
@@ -77,6 +79,9 @@ instance Literal Float where literal = fromRational . toRational
 instance Literal Double where literal = fromRational . toRational
 instance Literal Text where literal = fromString . Text.unpack
 instance Literal Lazy.Text where literal = fromString . Lazy.Text.unpack
+instance Literal ByteString where
+    literal bs = UnsafeExpression $
+        "'\\x" <> (fromString $ show $ Base16.encode bs) <> "'"
 instance ToParam (Enumerated enum) (PG (Enumerated enum))
   => Literal (Enumerated enum) where
     literal
