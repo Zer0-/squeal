@@ -28,6 +28,7 @@ import Data.ByteString.Lazy (toStrict)
 import Data.Int
 import Data.String
 import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8)
 
 import qualified Data.Aeson as JSON
 import qualified Data.Text as Text
@@ -81,7 +82,9 @@ instance Literal Text where literal = fromString . Text.unpack
 instance Literal Lazy.Text where literal = fromString . Lazy.Text.unpack
 instance Literal ByteString where
     literal bs = UnsafeExpression $
-        "'\\x" <> (fromString $ show $ Base16.encode bs) <> "'"
+        "'\\x"
+        <> (fromString $ Text.unpack $ decodeUtf8 $ Base16.encode bs)
+        <> "' :: bytea"
 instance ToParam (Enumerated enum) (PG (Enumerated enum))
   => Literal (Enumerated enum) where
     literal
